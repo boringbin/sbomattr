@@ -113,6 +113,71 @@ func TestPurlToURL_OtherPackageTypes(t *testing.T) {
 			purl:     "pkg:golang/google.golang.org/grpc@v1.56.0",
 			expected: "https://pkg.go.dev/google.golang.org/grpc@v1.56.0",
 		},
+		{
+			name:     "docker with namespace",
+			purl:     "pkg:docker/bitnami/nginx@latest",
+			expected: "https://hub.docker.com/r/bitnami/nginx",
+		},
+		{
+			name:     "docker official image (library)",
+			purl:     "pkg:docker/library/nginx@latest",
+			expected: "https://hub.docker.com/_/nginx",
+		},
+		{
+			name:     "docker without namespace",
+			purl:     "pkg:docker/alpine@3.18",
+			expected: "https://hub.docker.com/_/alpine",
+		},
+		{
+			name:     "oci with namespace",
+			purl:     "pkg:oci/bitnami/redis@7.0",
+			expected: "https://hub.docker.com/r/bitnami/redis",
+		},
+		{
+			name:     "oci official image",
+			purl:     "pkg:oci/library/ubuntu@22.04",
+			expected: "https://hub.docker.com/_/ubuntu",
+		},
+		{
+			name:     "deb",
+			purl:     "pkg:deb/debian/curl@7.88.1",
+			expected: "https://packages.debian.org/curl",
+		},
+		{
+			name:     "rpm",
+			purl:     "pkg:rpm/redhat/openssl@1.1.1",
+			expected: "https://rpmfind.net/linux/rpm2html/search.php?query=openssl",
+		},
+		{
+			name:     "apk",
+			purl:     "pkg:apk/alpine/curl@8.0.0",
+			expected: "https://pkgs.alpinelinux.org/packages?name=curl",
+		},
+		{
+			name:     "hex",
+			purl:     "pkg:hex/phoenix@1.7.0",
+			expected: "https://hex.pm/packages/phoenix/1.7.0",
+		},
+		{
+			name:     "cocoapods",
+			purl:     "pkg:cocoapods/Alamofire@5.6.0",
+			expected: "https://cocoapods.org/pods/Alamofire",
+		},
+		{
+			name:     "conda with namespace",
+			purl:     "pkg:conda/conda-forge/numpy@1.24.0",
+			expected: "https://anaconda.org/conda-forge/numpy",
+		},
+		{
+			name:     "conda without namespace",
+			purl:     "pkg:conda/pandas@2.0.0",
+			expected: "https://anaconda.org/anaconda/pandas",
+		},
+		{
+			name:     "bitbucket",
+			purl:     "pkg:bitbucket/atlassian/python-bitbucket@0.1.0",
+			expected: "https://bitbucket.org/atlassian/python-bitbucket/src/0.1.0",
+		},
 	}
 
 	for _, tt := range tests {
@@ -163,14 +228,14 @@ func TestPurlToURL_UnsupportedType(t *testing.T) {
 		name string
 		purl string
 	}{
-		{name: "docker", purl: "pkg:docker/library/nginx@latest"},
-		{name: "apk", purl: "pkg:apk/alpine/curl@8.0.0"},
-		{name: "rpm", purl: "pkg:rpm/redhat/openssl@1.1.1"},
-		{name: "deb", purl: "pkg:deb/debian/curl@7.88.1"},
-		{name: "conda", purl: "pkg:conda/conda-forge/numpy@1.24.0"},
-		{name: "hex", purl: "pkg:hex/phoenix@1.7.0"},
-		{name: "cocoapods", purl: "pkg:cocoapods/Alamofire@5.6.0"},
 		{name: "alpm", purl: "pkg:alpm/arch/pacman@6.0.0"},
+		{name: "bitnami", purl: "pkg:bitnami/nginx@1.0.0"},
+		{name: "conan", purl: "pkg:conan/boost@1.76.0"},
+		{name: "cran", purl: "pkg:cran/dplyr@1.0.0"},
+		{name: "generic", purl: "pkg:generic/example@1.0.0"},
+		{name: "hackage", purl: "pkg:hackage/aeson@2.0.0"},
+		{name: "huggingface", purl: "pkg:huggingface/transformers@4.0.0"},
+		{name: "mlflow", purl: "pkg:mlflow/model@1.0.0"},
 	}
 
 	for _, tt := range unsupportedTypes {

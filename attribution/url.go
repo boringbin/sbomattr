@@ -51,9 +51,28 @@ func mapPurlToURL(purl packageurl.PackageURL) *string {
 		return buildURL("https://pypi.org/project/%s/%s/", purl.Name, purl.Version)
 	case "github":
 		return buildURL("https://github.com/%s/%s/tree/%s", purl.Namespace, purl.Name, purl.Version)
-	case "alpm", "apk", "bitbucket", "bitnami", "cocoapods", "conan", "conda", "cran",
-		"deb", "docker", "generic", "hackage", "hex", "huggingface", "mlflow",
-		"oci", "qpkg", "rpm", "swid", "swift":
+	case "docker", "oci":
+		return buildDockerHubURL(purl.Namespace, purl.Name)
+	case "deb":
+		return buildURL("https://packages.debian.org/%s", purl.Name)
+	case "rpm":
+		return buildURL("https://rpmfind.net/linux/rpm2html/search.php?query=%s", purl.Name)
+	case "apk":
+		return buildURL("https://pkgs.alpinelinux.org/packages?name=%s", purl.Name)
+	case "hex":
+		return buildURL("https://hex.pm/packages/%s/%s", purl.Name, purl.Version)
+	case "cocoapods":
+		return buildURL("https://cocoapods.org/pods/%s", purl.Name)
+	case "conda":
+		if purl.Namespace != "" {
+			return buildURL("https://anaconda.org/%s/%s", purl.Namespace, purl.Name)
+		}
+		return buildURL("https://anaconda.org/anaconda/%s", purl.Name)
+	case "bitbucket":
+		return buildURL("https://bitbucket.org/%s/%s/src/%s", purl.Namespace, purl.Name, purl.Version)
+	case "alpm", "bitnami", "conan", "cran",
+		"generic", "hackage", "huggingface", "mlflow",
+		"qpkg", "swid", "swift":
 		logger.Debug("purl type not yet supported", "type", purl.Type) //nolint:sloglint // Package-level logger
 		return nil
 	default:
@@ -66,4 +85,13 @@ func mapPurlToURL(purl packageurl.PackageURL) *string {
 func buildURL(format string, args ...interface{}) *string {
 	url := fmt.Sprintf(format, args...)
 	return &url
+}
+
+// buildDockerHubURL constructs a Docker Hub URL for docker/oci images.
+// Official images (library namespace) use the "_" prefix, others use "r/" prefix.
+func buildDockerHubURL(namespace, name string) *string {
+	if namespace != "" && namespace != "library" {
+		return buildURL("https://hub.docker.com/r/%s/%s", namespace, name)
+	}
+	return buildURL("https://hub.docker.com/_/%s", name)
 }
