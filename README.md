@@ -1,6 +1,6 @@
 # sbomattr
 
-A simple CLI tool to create an aggregated notice for one or more SBOMs
+A simple library and CLI tool to create an aggregated notice for one or more SBOMs
 ([SPDX](https://spdx.dev/) or [CycloneDX](https://cyclonedx.org/)).
 
 ## Usage
