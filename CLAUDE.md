@@ -157,7 +157,8 @@ sbomattr/
 │   ├── renovate.json               # Renovate bot configuration
 │   └── workflows/                  # CI/CD workflows
 │       ├── build.yaml              # Build validation
-│       ├── test.yaml               # Test coverage
+│       ├── codeql.yml              # CodeQL security analysis
+│       ├── test.yaml               # Test coverage with Codecov upload
 │       └── typos.yaml              # Spell checking
 ├── attribution/                    # Core data types and utilities
 │   ├── attribution.go              # Attribution struct definition
@@ -375,7 +376,13 @@ The `testdata/` directory contains example SBOMs for testing:
 
 **Workflows:**
 - **build.yaml** - Build validation (runs `make` on push/PR to main)
+- **codeql.yml** - CodeQL Advanced security analysis
+  - Runs on: push/PR to main, scheduled weekly (Sundays at 23:36 UTC)
+  - Analyzes: Go code and GitHub Actions workflows
+  - Build mode: autobuild for Go, none for Actions
+  - Permissions: security-events (write), packages (read), actions/contents (read)
 - **test.yaml** - Test coverage (runs `make test-coverage` on push/PR to main)
+  - Uploads coverage reports to Codecov using `secrets.CODECOV_TOKEN`
 - **typos.yaml** - Spell checking with crate-ci/typos v1.38.1
 
 **Environment:**
