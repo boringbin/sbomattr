@@ -13,6 +13,7 @@ type Document struct {
 type Package struct {
 	Name             string        `json:"name"`
 	VersionInfo      string        `json:"versionInfo"`
+	Homepage         string        `json:"homepage"`
 	LicenseConcluded string        `json:"licenseConcluded"`
 	LicenseDeclared  string        `json:"licenseDeclared"`
 	ExternalRefs     []ExternalRef `json:"externalRefs"`

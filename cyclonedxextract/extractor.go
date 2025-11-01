@@ -23,8 +23,10 @@ func ExtractPackages(bom *BOM) []attribution.Attribution {
 			p.Purl = component.Purl
 		}
 
-		// Construct URL from purl if not already present
-		if p.URL == nil && p.Purl != "" {
+		// Construct URL: prefer external references, fall back to purl conversion
+		if refURL := findBestExternalRefURL(component.ExternalReferences); refURL != nil {
+			p.URL = refURL
+		} else if p.Purl != "" {
 			p.URL = attribution.PurlToURL(p.Purl)
 		}
 
@@ -63,6 +65,27 @@ func extractLicense(licenses *Licenses) *string {
 		}
 		if firstLicense.License.Name != "" {
 			return &firstLicense.License.Name
+		}
+	}
+
+	return nil
+}
+
+// findBestExternalRefURL finds the best URL from external references.
+// Priority order: website > distribution > documentation > vcs.
+func findBestExternalRefURL(refs []ExternalReference) *string {
+	if len(refs) == 0 {
+		return nil
+	}
+
+	// Priority order for reference types
+	priorityOrder := []string{"website", "distribution", "documentation", "vcs"}
+
+	for _, refType := range priorityOrder {
+		for _, ref := range refs {
+			if ref.Type == refType && ref.URL != "" {
+				return &ref.URL
+			}
 		}
 	}
 

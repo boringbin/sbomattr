@@ -33,8 +33,10 @@ func ExtractPackages(doc *Document) []attribution.Attribution {
 			}
 		}
 
-		// Construct URL from purl if not already present
-		if p.URL == nil && p.Purl != "" {
+		// Construct URL: prefer homepage, fall back to purl conversion
+		if pkg.Homepage != "" && pkg.Homepage != "NONE" && pkg.Homepage != "NOASSERTION" {
+			p.URL = &pkg.Homepage
+		} else if p.Purl != "" {
 			p.URL = attribution.PurlToURL(p.Purl)
 		}
 

@@ -11,10 +11,17 @@ type BOM struct {
 
 // Component represents a minimal CycloneDX component with only the fields we need.
 type Component struct {
-	Name     string    `json:"name"`
-	Version  string    `json:"version"`
-	Purl     string    `json:"purl"`
-	Licenses *Licenses `json:"licenses"`
+	Name               string              `json:"name"`
+	Version            string              `json:"version"`
+	Purl               string              `json:"purl"`
+	Licenses           *Licenses           `json:"licenses"`
+	ExternalReferences []ExternalReference `json:"externalReferences"`
+}
+
+// ExternalReference represents an external reference with a URL and type.
+type ExternalReference struct {
+	URL  string `json:"url"`
+	Type string `json:"type"`
 }
 
 // Licenses represents the licenses field which can be structured in different ways.

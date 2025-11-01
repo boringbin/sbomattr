@@ -23,6 +23,16 @@
             "id": "Apache-2.0"
           }
         }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://requests.readthedocs.io/"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/psf/requests"
+        }
       ]
     },
     {
@@ -46,6 +56,20 @@
       "licenses": [
         {
           "expression": "BSD-3-Clause"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/pallets/flask"
+        },
+        {
+          "type": "documentation",
+          "url": "https://flask.palletsprojects.com/"
+        },
+        {
+          "type": "website",
+          "url": "https://palletsprojects.com/p/flask/"
         }
       ]
     },

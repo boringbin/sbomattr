@@ -31,8 +31,22 @@ SBOMs into a single notice file. This tool does one thing well: combine SBOMs in
 The `URL` field is the quickest way to validate the package information for people who don't care about
 [the purl specification](https://github.com/package-url/purl-spec).
 
-If your SBOM already contains a relevant URL field, this will be used. Otherwise, the `Purl` field will be used to
-construct a URL.
+Canonical sources are preferred, but if one can't be identified, the `purl` will be used to generate a URL.
+
+### SPDX
+
+SPDX SBOM will try and use the `homepage` field if it is present and not `NOASSERTION`/`NONE`.
+
+The `downloadLocation` field is not used because it's often a tarball.
+
+### CycloneDX
+
+CycloneDX SBOM will use the following `externalReferences` priority order to generate a URL:
+
+1. `website`
+2. `distribution`
+3. `documentation`
+4. `vcs`
 
 ## Supported Formats
 

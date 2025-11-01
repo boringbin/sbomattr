@@ -12,13 +12,13 @@ sbomattr is a CLI tool written in Go that creates aggregated notices for one or 
 - **Automatic format detection**: Detects SPDX vs CycloneDX automatically
 - **Aggregation**: Process multiple SBOM files in a single command
 - **Deduplication**: Removes duplicate packages by purl or name
-- **Package URL conversion**: Converts purls to package manager URLs
+- **Package URL conversion**: Prefers SBOM-provided URLs, falls back to purl-generated URLs
 - **Multiple output formats**: CSV (default) and JSON
 - **Context-aware**: Full context.Context support for cancellation
 - **Structured logging**: Uses log/slog with configurable verbosity
 
-**Supported Package URL (purl) Types:**
-cargo, composer, gem, golang, maven, npm, nuget, pub, pypi, github (with URL conversion support)
+**Supported Package URL (purl) Types for Fallback URL Generation:**
+cargo, composer, gem, golang, maven, npm, nuget, pub, pypi, github (29 total types supported)
 
 ## CLI Usage
 
@@ -243,6 +243,10 @@ type Attribution struct {
 - `PurlToURL(purlString string) (*string, error)` - Convert purl to package manager URL
 - `SetLogger(*slog.Logger)` - Configure package-level logger
 
+**URL Preference Order:**
+1. SBOM-provided URLs (SPDX `homepage`, CycloneDX `externalReferences`)
+2. Generated from purl using `PurlToURL()`
+
 **Purl URL Conversion Support:**
 - cargo → crates.io
 - composer → packagist.org
@@ -271,7 +275,8 @@ type Attribution struct {
 
 **Key Types:**
 - `BOM` - Top-level CycloneDX structure
-- `Component` - Component with name, version, purl, licenses
+- `Component` - Component with name, version, purl, licenses, externalReferences
+- `ExternalReference` - External reference with URL and type
 - `License`, `LicenseChoice`, `Licenses` - License representation
 
 **Key Functions:**
@@ -279,6 +284,8 @@ type Attribution struct {
 - `ExtractPackages(*BOM) []attribution.Attribution` - Extract attributions
 
 **License Extraction Priority:** expression > ID > name
+
+**URL Extraction Priority:** externalReferences (website > distribution > documentation > vcs) > purl conversion
 
 ### `format` Package
 **Purpose:** Output formatters for attribution data
@@ -305,7 +312,7 @@ type Attribution struct {
 
 **Key Types:**
 - `Document` - SPDX document with version, SPDXID, packages
-- `Package` - Package with name, version, licenses, external refs
+- `Package` - Package with name, version, homepage, licenses, external refs
 - `ExternalRef` - External references (including purl)
 
 **Key Functions:**
@@ -314,6 +321,8 @@ type Attribution struct {
 - `ExtractPackages(*Document) []attribution.Attribution` - Extract attributions
 
 **License Extraction:** Prefers concluded license, falls back to declared if "NOASSERTION"
+
+**URL Extraction:** homepage (if not "NOASSERTION"/"NONE") > purl conversion
 
 ## Dependencies
 

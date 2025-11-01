@@ -438,3 +438,209 @@ func TestExtractPackages_NilExternalRefs(t *testing.T) {
 		t.Errorf("Expected URL to be nil, got %q", *attr.URL)
 	}
 }
+
+// TestExtractPackages_WithHomepage tests that homepage is preferred over purl-generated URL.
+func TestExtractPackages_WithHomepage(t *testing.T) {
+	t.Parallel()
+
+	doc := &spdxextract.Document{
+		SPDXVersion: "SPDX-2.3",
+		SPDXID:      "SPDXRef-DOCUMENT",
+		Packages: []spdxextract.Package{
+			{
+				Name:             "lodash",
+				VersionInfo:      "4.17.21",
+				Homepage:         "https://lodash.com",
+				LicenseConcluded: "MIT",
+				LicenseDeclared:  "MIT",
+				ExternalRefs: []spdxextract.ExternalRef{
+					{
+						ReferenceType:    "purl",
+						ReferenceLocator: "pkg:npm/lodash@4.17.21",
+					},
+				},
+			},
+		},
+	}
+
+	result := spdxextract.ExtractPackages(doc)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 attribution, got %d", len(result))
+	}
+
+	attr := result[0]
+	if attr.URL == nil {
+		t.Fatal("Expected URL to be set, got nil")
+	}
+
+	// Homepage should be preferred over purl-generated URL
+	if *attr.URL != "https://lodash.com" {
+		t.Errorf("Expected URL to be homepage 'https://lodash.com', got %q", *attr.URL)
+	}
+}
+
+// TestExtractPackages_WithHomepageNONE tests that "NONE" homepage falls back to purl.
+func TestExtractPackages_WithHomepageNONE(t *testing.T) {
+	t.Parallel()
+
+	doc := &spdxextract.Document{
+		SPDXVersion: "SPDX-2.3",
+		SPDXID:      "SPDXRef-DOCUMENT",
+		Packages: []spdxextract.Package{
+			{
+				Name:             "express",
+				VersionInfo:      "4.18.2",
+				Homepage:         "NONE",
+				LicenseConcluded: "MIT",
+				LicenseDeclared:  "MIT",
+				ExternalRefs: []spdxextract.ExternalRef{
+					{
+						ReferenceType:    "purl",
+						ReferenceLocator: "pkg:npm/express@4.18.2",
+					},
+				},
+			},
+		},
+	}
+
+	result := spdxextract.ExtractPackages(doc)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 attribution, got %d", len(result))
+	}
+
+	attr := result[0]
+	if attr.URL == nil {
+		t.Fatal("Expected URL to be set, got nil")
+	}
+
+	// Should fall back to purl-generated URL
+	expectedURL := "https://www.npmjs.com/package/express/v/4.18.2"
+	if *attr.URL != expectedURL {
+		t.Errorf("Expected URL to be purl-generated %q, got %q", expectedURL, *attr.URL)
+	}
+}
+
+// TestExtractPackages_WithHomepageNOASSERTION tests that "NOASSERTION" homepage falls back to purl.
+func TestExtractPackages_WithHomepageNOASSERTION(t *testing.T) {
+	t.Parallel()
+
+	doc := &spdxextract.Document{
+		SPDXVersion: "SPDX-2.3",
+		SPDXID:      "SPDXRef-DOCUMENT",
+		Packages: []spdxextract.Package{
+			{
+				Name:             "react",
+				VersionInfo:      "18.2.0",
+				Homepage:         "NOASSERTION",
+				LicenseConcluded: "MIT",
+				LicenseDeclared:  "MIT",
+				ExternalRefs: []spdxextract.ExternalRef{
+					{
+						ReferenceType:    "purl",
+						ReferenceLocator: "pkg:npm/react@18.2.0",
+					},
+				},
+			},
+		},
+	}
+
+	result := spdxextract.ExtractPackages(doc)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 attribution, got %d", len(result))
+	}
+
+	attr := result[0]
+	if attr.URL == nil {
+		t.Fatal("Expected URL to be set, got nil")
+	}
+
+	// Should fall back to purl-generated URL
+	expectedURL := "https://www.npmjs.com/package/react/v/18.2.0"
+	if *attr.URL != expectedURL {
+		t.Errorf("Expected URL to be purl-generated %q, got %q", expectedURL, *attr.URL)
+	}
+}
+
+// TestExtractPackages_WithHomepageEmpty tests that empty homepage falls back to purl.
+func TestExtractPackages_WithHomepageEmpty(t *testing.T) {
+	t.Parallel()
+
+	doc := &spdxextract.Document{
+		SPDXVersion: "SPDX-2.3",
+		SPDXID:      "SPDXRef-DOCUMENT",
+		Packages: []spdxextract.Package{
+			{
+				Name:             "webpack",
+				VersionInfo:      "5.88.2",
+				Homepage:         "",
+				LicenseConcluded: "MIT",
+				LicenseDeclared:  "MIT",
+				ExternalRefs: []spdxextract.ExternalRef{
+					{
+						ReferenceType:    "purl",
+						ReferenceLocator: "pkg:npm/webpack@5.88.2",
+					},
+				},
+			},
+		},
+	}
+
+	result := spdxextract.ExtractPackages(doc)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 attribution, got %d", len(result))
+	}
+
+	attr := result[0]
+	if attr.URL == nil {
+		t.Fatal("Expected URL to be set, got nil")
+	}
+
+	// Should fall back to purl-generated URL
+	expectedURL := "https://www.npmjs.com/package/webpack/v/5.88.2"
+	if *attr.URL != expectedURL {
+		t.Errorf("Expected URL to be purl-generated %q, got %q", expectedURL, *attr.URL)
+	}
+}
+
+// TestExtractPackages_WithHomepageNoPurl tests homepage without purl.
+func TestExtractPackages_WithHomepageNoPurl(t *testing.T) {
+	t.Parallel()
+
+	doc := &spdxextract.Document{
+		SPDXVersion: "SPDX-2.3",
+		SPDXID:      "SPDXRef-DOCUMENT",
+		Packages: []spdxextract.Package{
+			{
+				Name:             "custom-lib",
+				VersionInfo:      "1.0.0",
+				Homepage:         "https://example.com/custom-lib",
+				LicenseConcluded: "MIT",
+				LicenseDeclared:  "MIT",
+				ExternalRefs:     []spdxextract.ExternalRef{},
+			},
+		},
+	}
+
+	result := spdxextract.ExtractPackages(doc)
+
+	if len(result) != 1 {
+		t.Fatalf("Expected 1 attribution, got %d", len(result))
+	}
+
+	attr := result[0]
+	if attr.Purl != "" {
+		t.Errorf("Expected empty purl, got %q", attr.Purl)
+	}
+
+	if attr.URL == nil {
+		t.Fatal("Expected URL to be set from homepage, got nil")
+	}
+
+	if *attr.URL != "https://example.com/custom-lib" {
+		t.Errorf("Expected URL to be homepage 'https://example.com/custom-lib', got %q", *attr.URL)
+	}
+}
