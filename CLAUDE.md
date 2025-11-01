@@ -111,56 +111,93 @@ The project uses an extremely strict golangci-lint configuration (.golangci.yaml
 
 ### Testing Standards
 
-- Unit tests: Use `-short` flag to skip integration tests
-- Integration tests: Require `-tags=integration` build tag
-- Test files: Relaxed linting (no bodyclose, funlen, gosec, etc. in _test.go)
-- Separate test packages: Use `testpackage` linter to encourage `_test` package suffix
-- Parallel testing: Use `t.Parallel()` appropriately (tparallel linter)
+- **Unit tests**: Use `-short` flag to skip integration tests
+- **Integration tests**: Require `-tags=integration` build tag
+- **Test files**: Relaxed linting (no bodyclose, funlen, gosec, etc. in _test.go)
+- **Separate test packages**: Use `testpackage` linter to encourage `_test` package suffix
+- **Parallel testing**: Use `t.Parallel()` appropriately (tparallel linter)
+  - Exception: Cannot use `t.Parallel()` for tests that modify package-level state (e.g., SetLogger tests)
+- **Temporary directories**: Use `t.TempDir()` instead of `os.MkdirTemp()` for automatic cleanup
+- **CLI testing**: CLI tests modify global state (os.Args, flag.CommandLine) and cannot use `t.Parallel()`
+  - Save/restore global state using `t.Cleanup()`
+  - Reset flag.CommandLine between tests
+  - Capture stdout/stderr using os.Pipe() for output verification
+
+## Test Coverage
+
+The project maintains comprehensive test coverage across all packages.
+
+**Test Organization:**
+- Unit tests run with `make test` (uses `-short` flag)
+- Integration tests require `make test-integration` (uses `-tags=integration`)
+- Coverage reports generated with `make test-coverage` (creates coverage.out and coverage.html)
+
+**Key Test Patterns:**
+- **Parallel execution**: Most tests use `t.Parallel()` for faster execution
+- **Table-driven tests**: Extensive use of test cases with struct slices
+- **Mock implementations**: Custom writers/services for error path testing (e.g., failingWriter)
+- **Context cancellation**: Tests verify proper context.Context handling
+- **CLI testing**: Comprehensive CLI tests with output capture and state management
+
+**Test Files by Package:**
+- **attribution**: deduplicate_test.go, url_test.go
+- **cyclonedxextract**: parser_test.go, extractor_test.go
+- **cmd/sbomattr**: main_test.go (16 CLI tests)
+- **format**: format_test.go
+- **internal/sbom**: sbom_test.go
+- **processor (root)**: processor_test.go
+- **spdxextract**: parser_test.go, extractor_test.go, parser_integration_test.go
 
 ## Project Structure
 
 ```
 sbomattr/
-├── .devcontainer/              # VS Code devcontainer (Go 1.25, golangci-lint 2.5.0)
+├── .devcontainer/                  # VS Code devcontainer (Go 1.25, golangci-lint 2.5.0)
 ├── .github/
-│   ├── renovate.json           # Renovate bot configuration
-│   └── workflows/              # CI/CD workflows
-│       ├── build.yaml          # Build validation
-│       ├── test.yaml           # Test coverage
-│       └── typos.yaml          # Spell checking
-├── attribution/                # Core data types and utilities
-│   ├── attribution.go          # Attribution struct definition
-│   ├── deduplicate.go          # Deduplication logic (by purl/name)
-│   ├── url.go                  # Purl to package manager URL conversion
-│   └── *_test.go               # Tests
-├── cmd/sbomattr/               # CLI entry point
-│   └── main.go                 # Main CLI implementation
-├── cyclonedxextract/           # CycloneDX SBOM parser
-│   ├── types.go                # CycloneDX type definitions
-│   ├── parser.go               # JSON parsing
-│   └── extractor.go            # Attribution extraction
-├── format/                     # Output formatters
-│   ├── format.go               # CSV and JSON formatters
-│   └── format_test.go          # Tests
-├── internal/sbom/              # Internal SBOM utilities
-│   ├── sbom.go                 # Format detection (SPDX/CycloneDX/GitHub)
-│   └── sbom_test.go            # Tests
-├── spdxextract/                # SPDX SBOM parser
-│   ├── types.go                # SPDX type definitions
-│   ├── parser.go               # JSON parsing with GitHub wrapper support
+│   ├── renovate.json               # Renovate bot configuration
+│   └── workflows/                  # CI/CD workflows
+│       ├── build.yaml              # Build validation
+│       ├── test.yaml               # Test coverage
+│       └── typos.yaml              # Spell checking
+├── attribution/                    # Core data types and utilities
+│   ├── attribution.go              # Attribution struct definition
+│   ├── deduplicate.go              # Deduplication logic (by purl/name)
+│   ├── deduplicate_test.go         # Deduplication tests
+│   ├── url.go                      # Purl to package manager URL conversion
+│   └── url_test.go                 # URL conversion tests (all purl types)
+├── cmd/sbomattr/                   # CLI entry point
+│   ├── main.go                     # Main CLI implementation
+│   └── main_test.go                # CLI tests (16 tests, output capture pattern)
+├── cyclonedxextract/               # CycloneDX SBOM parser
+│   ├── types.go                    # CycloneDX type definitions
+│   ├── parser.go                   # JSON parsing
+│   ├── parser_test.go              # Parser tests
+│   ├── extractor.go                # Attribution extraction
+│   └── extractor_test.go           # Extractor tests (14 tests)
+├── format/                         # Output formatters
+│   ├── format.go                   # CSV and JSON formatters
+│   └── format_test.go              # Formatter tests (CSV/JSON)
+├── internal/sbom/                  # Internal SBOM utilities
+│   ├── sbom.go                     # Format detection (SPDX/CycloneDX/GitHub)
+│   └── sbom_test.go                # Format detection tests
+├── spdxextract/                    # SPDX SBOM parser
+│   ├── types.go                    # SPDX type definitions
+│   ├── parser.go                   # JSON parsing with GitHub wrapper support
+│   ├── parser_test.go              # Parser tests
 │   ├── parser_integration_test.go  # Integration tests (-tags=integration)
-│   └── extractor.go            # Attribution extraction
-├── testdata/                   # Test fixtures
-│   ├── example-spdx.json       # SPDX 2.3 example (npm packages)
-│   ├── example-cyclonedx.json  # CycloneDX 1.4 example (pypi/npm)
-│   └── github-wrapped-spdx.json # GitHub-wrapped SPDX format
-├── bin/                        # Build output directory
-├── processor.go                # Main processing logic (root package)
-├── processor_test.go           # Processor tests
-├── .golangci.yaml              # Extremely strict linting configuration
-├── Makefile                    # Build automation
-├── go.mod                      # Go 1.25.0
-└── typos.toml                  # Typos checker configuration
+│   ├── extractor.go                # Attribution extraction
+│   └── extractor_test.go           # Extractor tests (12 tests)
+├── testdata/                       # Test fixtures
+│   ├── example-spdx.json           # SPDX 2.3 example (npm packages)
+│   ├── example-cyclonedx.json      # CycloneDX 1.4 example (pypi/npm)
+│   └── github-wrapped-spdx.json    # GitHub-wrapped SPDX format
+├── bin/                            # Build output directory
+├── processor.go                    # Main processing logic (root package)
+├── processor_test.go               # Processor tests (context, SetLogger, error handling)
+├── .golangci.yaml                  # Extremely strict linting configuration
+├── Makefile                        # Build automation
+├── go.mod                          # Go 1.25.0
+└── typos.toml                      # Typos checker configuration
 ```
 
 ## Package Architecture
@@ -298,12 +335,10 @@ The `testdata/` directory contains example SBOMs for testing:
    - 3 npm packages: lodash@4.17.21, react@18.2.0, express@4.18.2
    - Demonstrates concluded vs declared licenses
    - Express has "NOASSERTION" for concluded license
-
 2. **example-cyclonedx.json** - CycloneDX 1.4 format
    - 4 packages: requests, numpy, flask (pypi), lodash (npm)
    - Various license formats: ID, name, expression
    - Demonstrates different license structures
-
 3. **github-wrapped-spdx.json** - GitHub-wrapped SPDX format
    - GitHub's `{"sbom": {...}}` wrapper
    - 3 packages: proxy-from-env, yargs, cliui
@@ -312,20 +347,20 @@ The `testdata/` directory contains example SBOMs for testing:
 ## Key Design Patterns
 
 1. **Package-level Loggers:** Both root package and attribution package use package-level slog loggers (disabled by default, configurable via SetLogger). This avoids global variables while maintaining linter compliance.
-
 2. **Interface-based Extraction:** `Extractor` interface allows format-agnostic processing in the main processor.
-
 3. **Pointer Fields for Optional Data:** `License` and `URL` fields use pointers (`*string`) to distinguish between empty string and missing data.
-
 4. **Deduplication Strategy:** Primary key is purl, falls back to name if purl is empty.
-
 5. **Context Propagation:** All processing functions accept `context.Context` for cancellation support.
-
 6. **Test Separation:** Integration tests use build tags (`//go:build integration`) and are excluded from normal test runs.
-
-7. **Parallel Testing:** Tests use `t.Parallel()` extensively to improve test execution speed.
-
+7. **Parallel Testing:** Tests use `t.Parallel()` extensively to improve test execution speed. Exception: Tests that modify global state (SetLogger, CLI tests) cannot use `t.Parallel()`.
 8. **Error Wrapping:** Consistent use of `fmt.Errorf` with `%w` for error context.
+9. **CLI Testing Pattern:** CLI tests use a comprehensive pattern for testing command-line interfaces:
+   - **Output capture**: Uses `os.Pipe()` to capture stdout/stderr
+   - **State management**: Saves and restores global state (os.Args, flag.CommandLine) using `t.Cleanup()`
+   - **Flag reset**: Resets `flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)` between tests
+   - **Serial execution**: Cannot use `t.Parallel()` due to global state modification
+   - **Exit code testing**: Verifies correct exit codes (0=success, 1=args, 2=SBOM, 3=runtime)
+   - **Temp directories**: Uses `t.TempDir()` for automatic cleanup of test files
 
 ## GitHub Actions CI/CD
 
