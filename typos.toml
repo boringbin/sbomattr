@@ -1,0 +1,14 @@
+[files]
+extend-exclude = [
+    "*",
+    "!attribution",
+    "!cmd",
+    "!cyclonedxextract",
+    "!format",
+    "!internal",
+    "!spdxextract",
+    "!CLAUDE.md",
+    "!LICENSE",
+    "!README.md",
+    "!*.go",
+]
