@@ -1,8 +1,10 @@
 package sbomattr_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -228,4 +230,86 @@ func TestProcessFiles_Cancellation(t *testing.T) {
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("ProcessFiles() with cancelled context should return context.Canceled, got %v", err)
 	}
+}
+
+// TestProcess_WithLogger tests Process with logger enabled to cover logger code paths.
+func TestProcess_WithLogger(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("testdata/example-spdx.json")
+	if err != nil {
+		t.Fatalf("failed to read test file: %v", err)
+	}
+
+	// Create a logger that writes to a buffer
+	var logBuf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuf, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+
+	ctx := context.Background()
+	attrs, err := sbomattr.Process(ctx, data, logger)
+
+	if err != nil {
+		t.Errorf("Process() with logger unexpected error: %v", err)
+	}
+	if len(attrs) == 0 {
+		t.Error("Process() returned empty attributions")
+	}
+
+	// Verify logger was used (should contain "detected SBOM format")
+	logOutput := logBuf.String()
+	if !contains(logOutput, "detected SBOM format") {
+		t.Error("Process() with logger should log format detection")
+	}
+}
+
+// TestProcessFiles_WithLogger tests ProcessFiles with logger to cover logger code paths.
+func TestProcessFiles_WithLogger(t *testing.T) {
+	t.Parallel()
+
+	// Create a logger that writes to a buffer
+	var logBuf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuf, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+
+	ctx := context.Background()
+	filenames := []string{
+		"testdata/example-spdx.json",
+		"testdata/does-not-exist.json", // This will trigger error logging
+	}
+
+	attrs, err := sbomattr.ProcessFiles(ctx, filenames, logger)
+
+	if err != nil {
+		t.Errorf("ProcessFiles() with logger unexpected error: %v", err)
+	}
+	if len(attrs) == 0 {
+		t.Error("ProcessFiles() returned empty attributions despite valid file")
+	}
+
+	// Verify logger was used
+	logOutput := logBuf.String()
+	if !contains(logOutput, "processing file") {
+		t.Error("ProcessFiles() with logger should log file processing")
+	}
+	if !contains(logOutput, "failed to read file") {
+		t.Error("ProcessFiles() with logger should log read errors")
+	}
+}
+
+// contains checks if a string contains a substring.
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || indexString(s, substr) >= 0)
+}
+
+// indexString returns the index of substr in s, or -1 if not found.
+func indexString(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }
