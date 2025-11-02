@@ -1,5 +1,7 @@
 # sbomattr
 
+[![codecov](https://codecov.io/gh/boringbin/sbomattr/graph/badge.svg?token=THH9AUJA1M)](https://codecov.io/gh/boringbin/sbomattr)
+
 A simple library and CLI tool to create an aggregated notice for one or more SBOMs
 ([SPDX](https://spdx.dev/) or [CycloneDX](https://cyclonedx.org/)).
 
