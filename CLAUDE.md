@@ -73,7 +73,7 @@ sbomattr/
 ├── format/               # CSV and JSON formatters
 ├── internal/sbom/        # Format detection
 ├── testdata/             # Test fixtures
-└── processor.go          # Root package: main processing logic
+└── sbomattr.go           # Root package: main processing logic
 ```
 
 ### Key Types and Functions
