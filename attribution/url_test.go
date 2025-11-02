@@ -1,6 +1,7 @@
 package attribution_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/boringbin/sbomattr/attribution"
@@ -36,7 +37,10 @@ func TestPurlToURL_NPMWithOrg(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := attribution.PurlToURL(tt.purl)
+			result, err := attribution.PurlToURL(tt.purl, nil)
+			if err != nil {
+				t.Fatalf("Expected no error, got %v", err)
+			}
 
 			if result == nil {
 				t.Fatalf("Expected URL, got nil")
@@ -184,7 +188,10 @@ func TestPurlToURL_OtherPackageTypes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := attribution.PurlToURL(tt.purl)
+			result, err := attribution.PurlToURL(tt.purl, nil)
+			if err != nil {
+				t.Fatalf("Expected no error, got %v", err)
+			}
 
 			if result == nil {
 				t.Fatalf("Expected URL, got nil")
@@ -201,10 +208,19 @@ func TestPurlToURL_OtherPackageTypes(t *testing.T) {
 func TestPurlToURL_InvalidPurl(t *testing.T) {
 	t.Parallel()
 
-	result := attribution.PurlToURL("not-a-valid-purl")
+	result, err := attribution.PurlToURL("not-a-valid-purl", nil)
+
+	if err == nil {
+		t.Error("Expected error for invalid purl, got nil")
+	}
+
+	// Should not be a sentinel error, but a parse error
+	if errors.Is(err, attribution.ErrEmptyPurl) || errors.Is(err, attribution.ErrUnsupportedPurlType) {
+		t.Errorf("Expected parse error, got sentinel error: %v", err)
+	}
 
 	if result != nil {
-		t.Errorf("Expected nil for invalid purl, got %q", *result)
+		t.Errorf("Expected nil result for invalid purl, got %q", *result)
 	}
 }
 
@@ -212,7 +228,11 @@ func TestPurlToURL_InvalidPurl(t *testing.T) {
 func TestPurlToURL_EmptyPurl(t *testing.T) {
 	t.Parallel()
 
-	result := attribution.PurlToURL("")
+	result, err := attribution.PurlToURL("", nil)
+
+	if !errors.Is(err, attribution.ErrEmptyPurl) {
+		t.Errorf("Expected ErrEmptyPurl, got %v", err)
+	}
 
 	if result != nil {
 		t.Errorf("Expected nil for empty purl, got %q", *result)
@@ -242,7 +262,11 @@ func TestPurlToURL_UnsupportedType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := attribution.PurlToURL(tt.purl)
+			result, err := attribution.PurlToURL(tt.purl, nil)
+
+			if !errors.Is(err, attribution.ErrUnsupportedPurlType) {
+				t.Errorf("Expected ErrUnsupportedPurlType for %q, got %v", tt.name, err)
+			}
 
 			if result != nil {
 				t.Errorf("Expected nil for unsupported purl type %q, got %q", tt.name, *result)
@@ -256,7 +280,11 @@ func TestPurlToURL_UnknownType(t *testing.T) {
 	t.Parallel()
 
 	// Test with a completely unknown/made-up purl type
-	result := attribution.PurlToURL("pkg:completely-unknown-type/package@1.0.0")
+	result, err := attribution.PurlToURL("pkg:completely-unknown-type/package@1.0.0", nil)
+
+	if !errors.Is(err, attribution.ErrUnsupportedPurlType) {
+		t.Errorf("Expected ErrUnsupportedPurlType for unknown purl type, got %v", err)
+	}
 
 	if result != nil {
 		t.Errorf("Expected nil for unknown purl type, got %q", *result)

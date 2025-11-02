@@ -27,7 +27,11 @@ func ExtractPackages(bom *BOM) []attribution.Attribution {
 		if refURL := findBestExternalRefURL(component.ExternalReferences); refURL != nil {
 			p.URL = refURL
 		} else if p.Purl != "" {
-			p.URL = attribution.PurlToURL(p.Purl)
+			// URL generation is best-effort - ignore expected errors (empty purl, unsupported types)
+			url, err := attribution.PurlToURL(p.Purl, nil)
+			if err == nil {
+				p.URL = url
+			}
 		}
 
 		// Extract license information

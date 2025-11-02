@@ -1,6 +1,7 @@
 package sbomattr_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"log/slog"
@@ -46,7 +47,7 @@ func TestProcess(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			attrs, err := sbomattr.Process(ctx, data)
+			attrs, err := sbomattr.Process(ctx, data, nil)
 
 			if tc.wantErr && err == nil {
 				t.Error("Process() expected error, got nil")
@@ -67,7 +68,7 @@ func TestProcess_InvalidData(t *testing.T) {
 	ctx := context.Background()
 	invalidData := []byte(`{"invalid": "json"}`)
 
-	_, err := sbomattr.Process(ctx, invalidData)
+	_, err := sbomattr.Process(ctx, invalidData, nil)
 	if err == nil {
 		t.Error("Process() with invalid data should return error")
 	}
@@ -85,7 +86,7 @@ func TestProcess_Cancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err = sbomattr.Process(ctx, data)
+	_, err = sbomattr.Process(ctx, data, nil)
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("Process() with cancelled context should return context.Canceled, got %v", err)
 	}
@@ -100,7 +101,7 @@ func TestProcessFiles(t *testing.T) {
 		"testdata/example-cyclonedx.json",
 	}
 
-	attrs, err := sbomattr.ProcessFiles(ctx, filenames)
+	attrs, err := sbomattr.ProcessFiles(ctx, filenames, nil)
 
 	if err != nil {
 		t.Errorf("ProcessFiles() unexpected error: %v", err)
@@ -120,7 +121,7 @@ func TestProcessFiles_WithInvalidFiles(t *testing.T) {
 	}
 
 	// Should still succeed because one valid file exists
-	attrs, err := sbomattr.ProcessFiles(ctx, filenames)
+	attrs, err := sbomattr.ProcessFiles(ctx, filenames, nil)
 
 	if err != nil {
 		t.Errorf("ProcessFiles() unexpected error: %v", err)
@@ -150,7 +151,7 @@ func TestProcessFiles_Integration(t *testing.T) {
 		t.Skip("no test data files found")
 	}
 
-	attrs, err := sbomattr.ProcessFiles(ctx, matches)
+	attrs, err := sbomattr.ProcessFiles(ctx, matches, nil)
 
 	if err != nil {
 		t.Errorf("ProcessFiles() unexpected error: %v", err)
@@ -162,59 +163,6 @@ func TestProcessFiles_Integration(t *testing.T) {
 	t.Logf("Processed %d files and extracted %d deduplicated attributions", len(matches), len(attrs))
 }
 
-// TestSetLogger tests the SetLogger function with a valid logger.
-func TestSetLogger(t *testing.T) {
-	// Note: Cannot use t.Parallel() here because SetLogger modifies package-level state
-
-	// Create a custom logger
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-
-	// This should not panic
-	sbomattr.SetLogger(logger)
-
-	// Test that operations still work with the new logger
-	data, err := os.ReadFile("testdata/example-spdx.json")
-	if err != nil {
-		t.Fatalf("failed to read test file: %v", err)
-	}
-
-	ctx := context.Background()
-	attrs, err := sbomattr.Process(ctx, data)
-
-	if err != nil {
-		t.Errorf("Process() with custom logger unexpected error: %v", err)
-	}
-
-	if len(attrs) == 0 {
-		t.Error("Process() with custom logger returned empty attributions")
-	}
-}
-
-// TestSetLogger_Nil tests the SetLogger function with nil (should not crash).
-func TestSetLogger_Nil(t *testing.T) {
-	// Note: Cannot use t.Parallel() here because SetLogger modifies package-level state
-
-	// This should not panic
-	sbomattr.SetLogger(nil)
-
-	// Test that operations still work after setting nil
-	data, err := os.ReadFile("testdata/example-spdx.json")
-	if err != nil {
-		t.Fatalf("failed to read test file: %v", err)
-	}
-
-	ctx := context.Background()
-	attrs, err := sbomattr.Process(ctx, data)
-
-	if err != nil {
-		t.Errorf("Process() after SetLogger(nil) unexpected error: %v", err)
-	}
-
-	if len(attrs) == 0 {
-		t.Error("Process() after SetLogger(nil) returned empty attributions")
-	}
-}
-
 // TestProcess_InvalidSPDXJSON tests error handling when SPDX parsing fails.
 func TestProcess_InvalidSPDXJSON(t *testing.T) {
 	t.Parallel()
@@ -223,7 +171,7 @@ func TestProcess_InvalidSPDXJSON(t *testing.T) {
 	// This is truly malformed JSON that will fail parsing
 	invalidSPDXData := []byte(`{"spdxVersion": "SPDX-2.3", this is broken`)
 
-	_, err := sbomattr.Process(ctx, invalidSPDXData)
+	_, err := sbomattr.Process(ctx, invalidSPDXData, nil)
 	if err == nil {
 		t.Error("Process() with invalid SPDX JSON should return error")
 	}
@@ -237,7 +185,7 @@ func TestProcess_InvalidCycloneDXJSON(t *testing.T) {
 	// This is truly malformed JSON that will fail parsing
 	invalidCycloneDXData := []byte(`{"bomFormat": "CycloneDX", broken json here`)
 
-	_, err := sbomattr.Process(ctx, invalidCycloneDXData)
+	_, err := sbomattr.Process(ctx, invalidCycloneDXData, nil)
 	if err == nil {
 		t.Error("Process() with invalid CycloneDX JSON should return error")
 	}
@@ -254,7 +202,7 @@ func TestProcessFiles_AllInvalidFiles(t *testing.T) {
 	}
 
 	// Should return error because no valid attributions could be extracted
-	attrs, err := sbomattr.ProcessFiles(ctx, filenames)
+	attrs, err := sbomattr.ProcessFiles(ctx, filenames, nil)
 
 	if err == nil {
 		t.Error("ProcessFiles() with all invalid files should return error")
@@ -278,8 +226,90 @@ func TestProcessFiles_Cancellation(t *testing.T) {
 		"testdata/example-cyclonedx.json",
 	}
 
-	_, err := sbomattr.ProcessFiles(ctx, filenames)
+	_, err := sbomattr.ProcessFiles(ctx, filenames, nil)
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("ProcessFiles() with cancelled context should return context.Canceled, got %v", err)
 	}
+}
+
+// TestProcess_WithLogger tests Process with logger enabled to cover logger code paths.
+func TestProcess_WithLogger(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("testdata/example-spdx.json")
+	if err != nil {
+		t.Fatalf("failed to read test file: %v", err)
+	}
+
+	// Create a logger that writes to a buffer
+	var logBuf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuf, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+
+	ctx := context.Background()
+	attrs, err := sbomattr.Process(ctx, data, logger)
+
+	if err != nil {
+		t.Errorf("Process() with logger unexpected error: %v", err)
+	}
+	if len(attrs) == 0 {
+		t.Error("Process() returned empty attributions")
+	}
+
+	// Verify logger was used (should contain "detected SBOM format")
+	logOutput := logBuf.String()
+	if !contains(logOutput, "detected SBOM format") {
+		t.Error("Process() with logger should log format detection")
+	}
+}
+
+// TestProcessFiles_WithLogger tests ProcessFiles with logger to cover logger code paths.
+func TestProcessFiles_WithLogger(t *testing.T) {
+	t.Parallel()
+
+	// Create a logger that writes to a buffer
+	var logBuf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuf, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))
+
+	ctx := context.Background()
+	filenames := []string{
+		"testdata/example-spdx.json",
+		"testdata/does-not-exist.json", // This will trigger error logging
+	}
+
+	attrs, err := sbomattr.ProcessFiles(ctx, filenames, logger)
+
+	if err != nil {
+		t.Errorf("ProcessFiles() with logger unexpected error: %v", err)
+	}
+	if len(attrs) == 0 {
+		t.Error("ProcessFiles() returned empty attributions despite valid file")
+	}
+
+	// Verify logger was used
+	logOutput := logBuf.String()
+	if !contains(logOutput, "processing file") {
+		t.Error("ProcessFiles() with logger should log file processing")
+	}
+	if !contains(logOutput, "failed to read file") {
+		t.Error("ProcessFiles() with logger should log read errors")
+	}
+}
+
+// contains checks if a string contains a substring.
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || indexString(s, substr) >= 0)
+}
+
+// indexString returns the index of substr in s, or -1 if not found.
+func indexString(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }

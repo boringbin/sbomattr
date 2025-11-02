@@ -13,20 +13,10 @@ import (
 
 // TestPrintUsage tests the printUsage function.
 func TestPrintUsage(t *testing.T) {
-	// Note: Cannot use t.Parallel() because test modifies global os.Stderr
-
-	// Capture stderr
-	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-
-	printUsage()
-
-	_ = w.Close()
-	os.Stderr = oldStderr
+	t.Parallel()
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	printUsage(&buf, "sbomattr")
 	output := buf.String()
 
 	// Check that usage contains expected strings
@@ -605,5 +595,52 @@ func TestExpandPaths_DirectoryWithSubdirectories(t *testing.T) {
 
 	if len(files) > 0 && filepath.Base(files[0]) != "root.json" {
 		t.Errorf("expandPaths() = %v, want root.json", filepath.Base(files[0]))
+	}
+}
+
+// TestRun_NoFilesFoundAfterExpansion tests the run function when expansion yields no files.
+func TestRun_NoFilesFoundAfterExpansion(t *testing.T) {
+	// Note: Cannot use t.Parallel() because run() modifies global flag.CommandLine
+
+	// Save and restore os.Args and flag.CommandLine
+	oldArgs := os.Args
+	oldCommandLine := flag.CommandLine
+	t.Cleanup(func() {
+		os.Args = oldArgs
+		flag.CommandLine = oldCommandLine
+	})
+
+	// Reset flag.CommandLine for this test
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+	// Create a directory with only non-JSON files
+	tmpDir := t.TempDir()
+	txtFile := filepath.Join(tmpDir, "test.txt")
+	if createErr := os.WriteFile(txtFile, []byte("not a json file"), 0600); createErr != nil {
+		t.Fatalf("failed to create test file: %v", createErr)
+	}
+
+	os.Args = []string{"sbomattr", tmpDir}
+
+	// Capture stderr
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	exitCode := run()
+
+	_ = w.Close()
+	os.Stderr = oldStderr
+
+	if exitCode != exitInvalidArgs {
+		t.Errorf("run() with no JSON files returned exit code %d, want %d", exitCode, exitInvalidArgs)
+	}
+
+	var buf bytes.Buffer
+	_, _ = io.Copy(&buf, r)
+	output := buf.String()
+
+	if !strings.Contains(output, "no SBOM files found") {
+		t.Errorf("run() stderr should mention no SBOM files found, got: %s", output)
 	}
 }

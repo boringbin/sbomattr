@@ -1,8 +1,6 @@
 package attribution_test
 
 import (
-	"log/slog"
-	"os"
 	"testing"
 
 	"github.com/boringbin/sbomattr/attribution"
@@ -86,7 +84,7 @@ func TestDeduplicate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := attribution.Deduplicate(tc.input)
+			got := attribution.Deduplicate(tc.input, nil)
 
 			if len(got) != len(tc.want) {
 				t.Errorf("Deduplicate() length = %d, want %d", len(got), len(tc.want))
@@ -107,7 +105,7 @@ func TestDeduplicate(t *testing.T) {
 	}
 }
 
-// TestDeduplicate_NilLogger tests the Deduplicate function works correctly.
+// TestDeduplicate_NilLogger tests the Deduplicate function works correctly with nil logger.
 func TestDeduplicate_NilLogger(t *testing.T) {
 	t.Parallel()
 
@@ -116,55 +114,11 @@ func TestDeduplicate_NilLogger(t *testing.T) {
 		{Name: "pkg1-duplicate", Purl: "pkg:npm/pkg1@1.0.0"},
 	}
 
-	got := attribution.Deduplicate(input)
+	got := attribution.Deduplicate(input, nil)
 
 	const expectedLength = 1
 	if len(got) != expectedLength {
 		t.Errorf("Deduplicate() length = %d, want %d", len(got), expectedLength)
-	}
-}
-
-// TestSetLogger tests the SetLogger function with a valid logger.
-func TestSetLogger(t *testing.T) {
-	// Note: Cannot use t.Parallel() here because SetLogger modifies package-level state
-
-	// Create a custom logger
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
-
-	// This should not panic
-	attribution.SetLogger(logger)
-
-	// Test that operations still work with the new logger
-	input := []attribution.Attribution{
-		{Name: "pkg1", Purl: "pkg:npm/pkg1@1.0.0"},
-		{Name: "pkg1-duplicate", Purl: "pkg:npm/pkg1@1.0.0"},
-	}
-
-	got := attribution.Deduplicate(input)
-
-	const expectedLength = 1
-	if len(got) != expectedLength {
-		t.Errorf("Deduplicate() with custom logger length = %d, want %d", len(got), expectedLength)
-	}
-}
-
-// TestSetLogger_Nil tests the SetLogger function with nil (should not crash).
-func TestSetLogger_Nil(t *testing.T) {
-	// Note: Cannot use t.Parallel() here because SetLogger modifies package-level state
-
-	// This should not panic
-	attribution.SetLogger(nil)
-
-	// Test that operations still work after setting nil
-	input := []attribution.Attribution{
-		{Name: "pkg1", Purl: "pkg:npm/pkg1@1.0.0"},
-	}
-
-	got := attribution.Deduplicate(input)
-
-	const expectedLength = 1
-	if len(got) != expectedLength {
-		t.Errorf("Deduplicate() after SetLogger(nil) length = %d, want %d", len(got), expectedLength)
 	}
 }
 

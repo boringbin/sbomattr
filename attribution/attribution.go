@@ -1,23 +1,5 @@
 package attribution
 
-import (
-	"io"
-	"log/slog"
-)
-
-// logger is the package-level logger. By default, logging is disabled.
-//
-//nolint:gochecknoglobals // Package-level logger is simpler
-var logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-
-// SetLogger configures the logger for this package.
-// By default, logging is disabled. Call this function to enable logging.
-func SetLogger(l *slog.Logger) {
-	if l != nil {
-		logger = l
-	}
-}
-
 // Attribution represents a simplified view of an SBOM package with essential fields.
 //
 // The goal is to be able to use this to point to:
