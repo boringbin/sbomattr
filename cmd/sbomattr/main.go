@@ -4,13 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/boringbin/sbomattr"
-	"github.com/boringbin/sbomattr/attribution"
 	"github.com/boringbin/sbomattr/format"
 )
 
@@ -39,7 +39,7 @@ func run() int {
 
 	// Customize usage message
 	printUsageFunc := func() {
-		printUsage()
+		printUsage(os.Stderr, os.Args[0])
 	}
 	flag.CommandLine.Usage = printUsageFunc
 
@@ -60,7 +60,7 @@ func run() int {
 	// Validate arguments
 	if len(args) == 0 {
 		logger.Error("no SBOM files or directories provided")
-		printUsage()
+		printUsage(os.Stderr, os.Args[0])
 		return exitInvalidArgs
 	}
 
@@ -72,13 +72,9 @@ func run() int {
 		return exitInvalidArgs
 	}
 
-	// Configure package-level loggers
-	sbomattr.SetLogger(logger)
-	attribution.SetLogger(logger)
-
 	// Process all files using the library
 	ctx := context.Background()
-	attributions, err := sbomattr.ProcessFiles(ctx, files)
+	attributions, err := sbomattr.ProcessFiles(ctx, files, logger)
 	if err != nil {
 		logger.Error("failed to process SBOM files", "error", err)
 		return exitInvalidSBOM
@@ -94,16 +90,13 @@ func run() int {
 	return exitSuccess
 }
 
-// printUsage prints the usage message.
-func printUsage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] <file-or-directory>...\n\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "Create an aggregated notice for one or more SBOMs.\n\n")
-	fmt.Fprintf(os.Stderr, "Arguments:\n")
-	fmt.Fprintf(
-		os.Stderr,
-		"  file-or-directory   SBOM files or directories containing SBOM files\n\n",
-	)
-	fmt.Fprintf(os.Stderr, "Options:\n")
+// printUsage prints the usage message to the provided writer.
+func printUsage(w io.Writer, progName string) {
+	fmt.Fprintf(w, "Usage: %s [OPTIONS] <file-or-directory>...\n\n", progName)
+	fmt.Fprintf(w, "Create an aggregated notice for one or more SBOMs.\n\n")
+	fmt.Fprintf(w, "Arguments:\n")
+	fmt.Fprintf(w, "  file-or-directory   SBOM files or directories containing SBOM files\n\n")
+	fmt.Fprintf(w, "Options:\n")
 	flag.PrintDefaults()
 }
 

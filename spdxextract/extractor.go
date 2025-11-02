@@ -37,7 +37,11 @@ func ExtractPackages(doc *Document) []attribution.Attribution {
 		if pkg.Homepage != "" && pkg.Homepage != "NONE" && pkg.Homepage != "NOASSERTION" {
 			p.URL = &pkg.Homepage
 		} else if p.Purl != "" {
-			p.URL = attribution.PurlToURL(p.Purl)
+			// URL generation is best-effort - ignore expected errors (empty purl, unsupported types)
+			url, err := attribution.PurlToURL(p.Purl, nil)
+			if err == nil {
+				p.URL = url
+			}
 		}
 
 		packages = append(packages, p)

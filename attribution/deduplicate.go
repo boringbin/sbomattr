@@ -1,8 +1,11 @@
 package attribution
 
+import "log/slog"
+
 // Deduplicate removes duplicate attributions based on Purl, falling back to Name.
 // The first occurrence of each unique attribution is kept.
-func Deduplicate(attributions []Attribution) []Attribution {
+// The logger parameter is optional; pass nil to disable logging.
+func Deduplicate(attributions []Attribution, logger *slog.Logger) []Attribution {
 	seen := make(map[string]bool)
 	result := make([]Attribution, 0, len(attributions))
 
@@ -16,8 +19,8 @@ func Deduplicate(attributions []Attribution) []Attribution {
 		if !seen[key] {
 			seen[key] = true
 			result = append(result, a)
-		} else {
-			logger.Debug("skipping duplicate attribution", "key", key) //nolint:sloglint // Package-level logger
+		} else if logger != nil {
+			logger.Debug("skipping duplicate attribution", "key", key)
 		}
 	}
 

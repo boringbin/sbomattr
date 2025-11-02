@@ -13,20 +13,10 @@ import (
 
 // TestPrintUsage tests the printUsage function.
 func TestPrintUsage(t *testing.T) {
-	// Note: Cannot use t.Parallel() because test modifies global os.Stderr
-
-	// Capture stderr
-	oldStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-
-	printUsage()
-
-	_ = w.Close()
-	os.Stderr = oldStderr
+	t.Parallel()
 
 	var buf bytes.Buffer
-	_, _ = io.Copy(&buf, r)
+	printUsage(&buf, "sbomattr")
 	output := buf.String()
 
 	// Check that usage contains expected strings

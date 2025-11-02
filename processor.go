@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 
@@ -21,54 +20,15 @@ import (
 	"github.com/boringbin/sbomattr/spdxextract"
 )
 
-// logger is the package-level logger. By default, logging is disabled.
-//
-//nolint:gochecknoglobals // Package-level logger is simpler
-var logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-
-// SetLogger configures the logger for this package.
-// By default, logging is disabled. Call this function to enable logging.
-func SetLogger(l *slog.Logger) {
-	if l != nil {
-		logger = l
-	}
-}
-
-// Extractor defines the interface for SBOM format extractors.
-type Extractor interface {
-	Extract(data []byte) ([]attribution.Attribution, error)
-}
-
-// spdxExtractor implements Extractor for SPDX format.
-type spdxExtractor struct{}
-
-func (e *spdxExtractor) Extract(data []byte) ([]attribution.Attribution, error) {
-	doc, err := spdxextract.ParseSBOM(data)
-	if err != nil {
-		return nil, fmt.Errorf("parse SPDX: %w", err)
-	}
-	return spdxextract.ExtractPackages(doc), nil
-}
-
-// cyclonedxExtractor implements Extractor for CycloneDX format.
-type cyclonedxExtractor struct{}
-
-func (e *cyclonedxExtractor) Extract(data []byte) ([]attribution.Attribution, error) {
-	bom, err := cyclonedxextract.ParseSBOM(data)
-	if err != nil {
-		return nil, fmt.Errorf("parse CycloneDX: %w", err)
-	}
-	return cyclonedxextract.ExtractPackages(bom), nil
-}
-
 // Process processes a single SBOM file provided as a byte slice.
 // It automatically detects the SBOM format (SPDX or CycloneDX), parses it,
 // and extracts attribution information.
 //
 // The context parameter can be used for cancellation.
+// The logger parameter is optional; pass nil to disable logging.
 //
 // Returns a slice of Attribution structs or an error if the SBOM cannot be processed.
-func Process(ctx context.Context, data []byte) ([]attribution.Attribution, error) {
+func Process(ctx context.Context, data []byte, logger *slog.Logger) ([]attribution.Attribution, error) {
 	// Check for cancellation
 	select {
 	case <-ctx.Done():
@@ -82,20 +42,27 @@ func Process(ctx context.Context, data []byte) ([]attribution.Attribution, error
 		return nil, fmt.Errorf("detect format: %w", err)
 	}
 
-	logger.DebugContext(ctx, "detected SBOM format", "format", format) //nolint:sloglint // Package-level logger
-
-	// Get the appropriate extractor
-	extractors := map[string]Extractor{
-		"spdx":      &spdxExtractor{},
-		"cyclonedx": &cyclonedxExtractor{},
+	if logger != nil {
+		logger.DebugContext(ctx, "detected SBOM format", "format", format)
 	}
-	extractor, ok := extractors[format]
-	if !ok {
+
+	// Extract attributions based on format
+	switch format {
+	case "spdx":
+		doc, parseErr := spdxextract.ParseSBOM(data)
+		if parseErr != nil {
+			return nil, fmt.Errorf("parse SPDX: %w", parseErr)
+		}
+		return spdxextract.ExtractPackages(doc), nil
+	case "cyclonedx":
+		bom, parseErr := cyclonedxextract.ParseSBOM(data)
+		if parseErr != nil {
+			return nil, fmt.Errorf("parse CycloneDX: %w", parseErr)
+		}
+		return cyclonedxextract.ExtractPackages(bom), nil
+	default:
 		return nil, fmt.Errorf("unsupported SBOM format: %s", format)
 	}
-
-	// Extract attributions
-	return extractor.Extract(data)
 }
 
 // ProcessFiles processes multiple SBOM files from the filesystem.
@@ -103,10 +70,11 @@ func Process(ctx context.Context, data []byte) ([]attribution.Attribution, error
 // attributions based on Package URL (purl) or name if purl is not available.
 //
 // The context parameter can be used for cancellation.
+// The logger parameter is optional; pass nil to disable logging.
 // Errors processing individual files are logged but do not stop processing of other files.
 //
 // Returns the deduplicated attributions or an error if no valid attributions could be extracted.
-func ProcessFiles(ctx context.Context, filenames []string) ([]attribution.Attribution, error) {
+func ProcessFiles(ctx context.Context, filenames []string, logger *slog.Logger) ([]attribution.Attribution, error) {
 	var allAttributions []attribution.Attribution
 
 	for _, filename := range filenames {
@@ -117,33 +85,23 @@ func ProcessFiles(ctx context.Context, filenames []string) ([]attribution.Attrib
 		default:
 		}
 
-		logger.DebugContext(ctx, "processing file", "file", filename) //nolint:sloglint // Package-level logger
+		if logger != nil {
+			logger.DebugContext(ctx, "processing file", "file", filename)
+		}
 
 		data, err := os.ReadFile(filename)
 		if err != nil {
-			//nolint:sloglint // Package-level logger
-			logger.ErrorContext(
-				ctx,
-				"failed to read file",
-				"file",
-				filename,
-				"error",
-				err,
-			)
+			if logger != nil {
+				logger.ErrorContext(ctx, "failed to read file", "file", filename, "error", err)
+			}
 			continue
 		}
 
-		attrs, err := Process(ctx, data)
+		attrs, err := Process(ctx, data, logger)
 		if err != nil {
-			//nolint:sloglint // Package-level logger
-			logger.ErrorContext(
-				ctx,
-				"failed to process file",
-				"file",
-				filename,
-				"error",
-				err,
-			)
+			if logger != nil {
+				logger.ErrorContext(ctx, "failed to process file", "file", filename, "error", err)
+			}
 			continue
 		}
 
@@ -155,7 +113,7 @@ func ProcessFiles(ctx context.Context, filenames []string) ([]attribution.Attrib
 	}
 
 	// Deduplicate attributions
-	deduplicated := attribution.Deduplicate(allAttributions)
+	deduplicated := attribution.Deduplicate(allAttributions, logger)
 
 	return deduplicated, nil
 }
