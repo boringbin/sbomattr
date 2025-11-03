@@ -80,7 +80,7 @@ func TestPurlToURL_OtherPackageTypes(t *testing.T) {
 		{
 			name:     "golang without namespace",
 			purl:     "pkg:golang/github.com/gin-gonic/gin@v1.9.0",
-			expected: "https://pkg.go.dev/github.com/gin-gonic/gin@v1.9.0",
+			expected: "https://pkg.go.dev/github.com/gin-gonic/gin",
 		},
 		{
 			name:     "nuget",
@@ -115,7 +115,7 @@ func TestPurlToURL_OtherPackageTypes(t *testing.T) {
 		{
 			name:     "golang with namespace",
 			purl:     "pkg:golang/google.golang.org/grpc@v1.56.0",
-			expected: "https://pkg.go.dev/google.golang.org/grpc@v1.56.0",
+			expected: "https://pkg.go.dev/google.golang.org/grpc",
 		},
 		{
 			name:     "docker with namespace",
