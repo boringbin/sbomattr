@@ -35,6 +35,10 @@ The `URL` field is the quickest way to validate the package information for peop
 
 Canonical sources are preferred, but if one can't be identified, the `purl` will be used to generate a URL.
 
+> [!NOTE]
+> If accuracy is important, you should enrich the SBOM with canonical URL fields before using this tool.
+> URL generation is best-effort and may not be accurate.
+
 ### SPDX
 
 SPDX SBOM will try and use the `homepage` field if it is present and not `NOASSERTION`/`NONE`.
