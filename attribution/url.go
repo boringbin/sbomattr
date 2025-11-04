@@ -46,10 +46,7 @@ func mapPurlToURL(purl packageurl.PackageURL, logger *slog.Logger) (*string, err
 	case "gem":
 		return buildURL("https://rubygems.org/gems/%s/versions/%s", purl.Name, purl.Version), nil
 	case "golang":
-		if purl.Namespace != "" {
-			return buildURL("https://pkg.go.dev/%s/%s@%s", purl.Namespace, purl.Name, purl.Version), nil
-		}
-		return buildURL("https://pkg.go.dev/%s@%s", purl.Name, purl.Version), nil
+		return buildGolangURL(purl), nil
 	case "maven":
 		return buildURL("https://mvnrepository.com/artifact/%s/%s/%s", purl.Namespace, purl.Name, purl.Version), nil
 	case "npm":
@@ -66,7 +63,7 @@ func mapPurlToURL(purl packageurl.PackageURL, logger *slog.Logger) (*string, err
 	case "github":
 		return buildURL("https://github.com/%s/%s/tree/%s", purl.Namespace, purl.Name, purl.Version), nil
 	case "docker", "oci":
-		return buildDockerHubURL(purl.Namespace, purl.Name), nil
+		return buildDockerHubURL(purl), nil
 	case "deb":
 		return buildURL("https://packages.debian.org/%s", purl.Name), nil
 	case "rpm":
@@ -98,11 +95,21 @@ func buildURL(format string, args ...any) *string {
 	return &url
 }
 
+// buildGolangURL constructs a Go package URL from a purl.
+// Version is not used, since versions are constructed in the https://pkg.go.dev documentation using tags.
+// Most packages use a prefix like `v1.0.0`, but this isn't always the case.
+func buildGolangURL(purl packageurl.PackageURL) *string {
+	if purl.Namespace != "" {
+		return buildURL("https://pkg.go.dev/%s/%s", purl.Namespace, purl.Name)
+	}
+	return buildURL("https://pkg.go.dev/%s", purl.Name)
+}
+
 // buildDockerHubURL constructs a Docker Hub URL for docker/oci images.
 // Official images (library namespace) use the "_" prefix, others use "r/" prefix.
-func buildDockerHubURL(namespace, name string) *string {
-	if namespace != "" && namespace != "library" {
-		return buildURL("https://hub.docker.com/r/%s/%s", namespace, name)
+func buildDockerHubURL(purl packageurl.PackageURL) *string {
+	if purl.Namespace != "" && purl.Namespace != "library" {
+		return buildURL("https://hub.docker.com/r/%s/%s", purl.Namespace, purl.Name)
 	}
-	return buildURL("https://hub.docker.com/_/%s", name)
+	return buildURL("https://hub.docker.com/_/%s", purl.Name)
 }
