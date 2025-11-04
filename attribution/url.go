@@ -40,47 +40,41 @@ func mapPurlToURL(purl packageurl.PackageURL, logger *slog.Logger) (*string, err
 	// See https://github.com/package-url/purl-spec#known-purl-types
 	switch purl.Type {
 	case "cargo":
-		return buildURL("https://crates.io/crates/%s/%s", purl.Name, purl.Version), nil
+		return buildCargoURL(purl), nil
 	case "composer":
-		return buildURL("https://packagist.org/packages/%s/%s#%s", purl.Namespace, purl.Name, purl.Version), nil
+		return buildComposerURL(purl), nil
 	case "gem":
-		return buildURL("https://rubygems.org/gems/%s/versions/%s", purl.Name, purl.Version), nil
+		return buildGemURL(purl), nil
 	case "golang":
 		return buildGolangURL(purl), nil
 	case "maven":
-		return buildURL("https://mvnrepository.com/artifact/%s/%s/%s", purl.Namespace, purl.Name, purl.Version), nil
+		return buildMavenURL(purl), nil
 	case "npm":
-		if purl.Namespace != "" {
-			return buildURL("https://www.npmjs.com/package/%s/%s/v/%s", purl.Namespace, purl.Name, purl.Version), nil
-		}
-		return buildURL("https://www.npmjs.com/package/%s/v/%s", purl.Name, purl.Version), nil
+		return buildNPMURL(purl), nil
 	case "nuget":
-		return buildURL("https://www.nuget.org/packages/%s/%s", purl.Name, purl.Version), nil
+		return buildNugetURL(purl), nil
 	case "pub":
-		return buildURL("https://pub.dev/packages/%s/versions/%s", purl.Name, purl.Version), nil
+		return buildPubURL(purl), nil
 	case "pypi":
-		return buildURL("https://pypi.org/project/%s/%s/", purl.Name, purl.Version), nil
+		return buildPypiURL(purl), nil
 	case "github":
-		return buildURL("https://github.com/%s/%s/tree/%s", purl.Namespace, purl.Name, purl.Version), nil
+		return buildGithubURL(purl), nil
 	case "docker", "oci":
 		return buildDockerHubURL(purl), nil
 	case "deb":
-		return buildURL("https://packages.debian.org/%s", purl.Name), nil
+		return buildDebURL(purl), nil
 	case "rpm":
-		return buildURL("https://rpmfind.net/linux/rpm2html/search.php?query=%s", purl.Name), nil
+		return buildRpmURL(purl), nil
 	case "apk":
-		return buildURL("https://pkgs.alpinelinux.org/packages?name=%s", purl.Name), nil
+		return buildApkURL(purl), nil
 	case "hex":
-		return buildURL("https://hex.pm/packages/%s/%s", purl.Name, purl.Version), nil
+		return buildHexURL(purl), nil
 	case "cocoapods":
-		return buildURL("https://cocoapods.org/pods/%s", purl.Name), nil
+		return buildCocoapodsURL(purl), nil
 	case "conda":
-		if purl.Namespace != "" {
-			return buildURL("https://anaconda.org/%s/%s", purl.Namespace, purl.Name), nil
-		}
-		return buildURL("https://anaconda.org/anaconda/%s", purl.Name), nil
+		return buildCondaURL(purl), nil
 	case "bitbucket":
-		return buildURL("https://bitbucket.org/%s/%s/src/%s", purl.Namespace, purl.Name, purl.Version), nil
+		return buildBitbucketURL(purl), nil
 	default:
 		if logger != nil {
 			logger.Debug("purl type not supported", "type", purl.Type)
@@ -95,6 +89,21 @@ func buildURL(format string, args ...any) *string {
 	return &url
 }
 
+// buildCargoURL constructs a Cargo package URL from a purl.
+func buildCargoURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://crates.io/crates/%s/%s", purl.Name, purl.Version)
+}
+
+// buildComposerURL constructs a Composer package URL from a purl.
+func buildComposerURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://packagist.org/packages/%s/%s#%s", purl.Namespace, purl.Name, purl.Version)
+}
+
+// buildGemURL constructs a RubyGems package URL from a purl.
+func buildGemURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://rubygems.org/gems/%s/versions/%s", purl.Name, purl.Version)
+}
+
 // buildGolangURL constructs a Go package URL from a purl.
 // Version is not used, since versions are constructed in the https://pkg.go.dev documentation using tags.
 // Most packages use a prefix like `v1.0.0`, but this isn't always the case.
@@ -105,6 +114,39 @@ func buildGolangURL(purl packageurl.PackageURL) *string {
 	return buildURL("https://pkg.go.dev/%s", purl.Name)
 }
 
+// buildMavenURL constructs a Maven package URL from a purl.
+func buildMavenURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://mvnrepository.com/artifact/%s/%s/%s", purl.Namespace, purl.Name, purl.Version)
+}
+
+// buildNPMURL constructs an NPM package URL from a purl.
+func buildNPMURL(purl packageurl.PackageURL) *string {
+	if purl.Namespace != "" {
+		return buildURL("https://www.npmjs.com/package/%s/%s/v/%s", purl.Namespace, purl.Name, purl.Version)
+	}
+	return buildURL("https://www.npmjs.com/package/%s/v/%s", purl.Name, purl.Version)
+}
+
+// buildNugetURL constructs a NuGet package URL from a purl.
+func buildNugetURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://www.nuget.org/packages/%s/%s", purl.Name, purl.Version)
+}
+
+// buildPubURL constructs a Pub package URL from a purl.
+func buildPubURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://pub.dev/packages/%s/versions/%s", purl.Name, purl.Version)
+}
+
+// buildPypiURL constructs a PyPI package URL from a purl.
+func buildPypiURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://pypi.org/project/%s/%s/", purl.Name, purl.Version)
+}
+
+// buildGithubURL constructs a GitHub package URL from a purl.
+func buildGithubURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://github.com/%s/%s/tree/%s", purl.Namespace, purl.Name, purl.Version)
+}
+
 // buildDockerHubURL constructs a Docker Hub URL for docker/oci images.
 // Official images (library namespace) use the "_" prefix, others use "r/" prefix.
 func buildDockerHubURL(purl packageurl.PackageURL) *string {
@@ -112,4 +154,42 @@ func buildDockerHubURL(purl packageurl.PackageURL) *string {
 		return buildURL("https://hub.docker.com/r/%s/%s", purl.Namespace, purl.Name)
 	}
 	return buildURL("https://hub.docker.com/_/%s", purl.Name)
+}
+
+// buildDebURL constructs a Debian package URL from a purl.
+func buildDebURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://packages.debian.org/%s", purl.Name)
+}
+
+// buildRpmURL constructs a RPM package URL from a purl.
+func buildRpmURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://rpmfind.net/linux/rpm2html/search.php?query=%s", purl.Name)
+}
+
+// buildApkURL constructs an APK package URL from a purl.
+func buildApkURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://pkgs.alpinelinux.org/packages?name=%s", purl.Name)
+}
+
+// buildHexURL constructs a Hex package URL from a purl.
+func buildHexURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://hex.pm/packages/%s/%s", purl.Name, purl.Version)
+}
+
+// buildCocoapodsURL constructs a CocoaPods package URL from a purl.
+func buildCocoapodsURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://cocoapods.org/pods/%s", purl.Name)
+}
+
+// buildCondaURL constructs a Conda package URL from a purl.
+func buildCondaURL(purl packageurl.PackageURL) *string {
+	if purl.Namespace != "" {
+		return buildURL("https://anaconda.org/%s/%s", purl.Namespace, purl.Name)
+	}
+	return buildURL("https://anaconda.org/anaconda/%s", purl.Name)
+}
+
+// buildBitbucketURL constructs a Bitbucket package URL from a purl.
+func buildBitbucketURL(purl packageurl.PackageURL) *string {
+	return buildURL("https://bitbucket.org/%s/%s/src/%s", purl.Namespace, purl.Name, purl.Version)
 }
