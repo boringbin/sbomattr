@@ -110,7 +110,7 @@ func TestPurlToURL_OtherPackageTypes(t *testing.T) {
 		{
 			name:     "maven",
 			purl:     "pkg:maven/org.springframework/spring-core@5.3.28",
-			expected: "https://mvnrepository.com/artifact/org.springframework/spring-core/5.3.28",
+			expected: "https://central.sonatype.com/artifact/org.springframework/spring-core/5.3.28",
 		},
 		{
 			name:     "golang with namespace",

@@ -90,11 +90,13 @@ func buildURL(format string, args ...any) *string {
 }
 
 // buildCargoURL constructs a Cargo package URL from a purl.
+// https://crates.io allows you to specify a version in the URL following the package name.
 func buildCargoURL(purl packageurl.PackageURL) *string {
 	return buildURL("https://crates.io/crates/%s/%s", purl.Name, purl.Version)
 }
 
 // buildComposerURL constructs a Composer package URL from a purl.
+// https://packagist.org allows you to select a version and it will appear as an anchor in the URL.
 func buildComposerURL(purl packageurl.PackageURL) *string {
 	return buildURL("https://packagist.org/packages/%s/%s#%s", purl.Namespace, purl.Name, purl.Version)
 }
@@ -115,8 +117,9 @@ func buildGolangURL(purl packageurl.PackageURL) *string {
 }
 
 // buildMavenURL constructs a Maven package URL from a purl.
+// Uses the Maven Central repository URL.
 func buildMavenURL(purl packageurl.PackageURL) *string {
-	return buildURL("https://mvnrepository.com/artifact/%s/%s/%s", purl.Namespace, purl.Name, purl.Version)
+	return buildURL("https://central.sonatype.com/artifact/%s/%s/%s", purl.Namespace, purl.Name, purl.Version)
 }
 
 // buildNPMURL constructs an NPM package URL from a purl.
@@ -157,6 +160,7 @@ func buildDockerHubURL(purl packageurl.PackageURL) *string {
 }
 
 // buildDebURL constructs a Debian package URL from a purl.
+// For simplicity, we're not considering the distribution name in the URL.
 func buildDebURL(purl packageurl.PackageURL) *string {
 	return buildURL("https://packages.debian.org/%s", purl.Name)
 }
@@ -167,6 +171,7 @@ func buildRpmURL(purl packageurl.PackageURL) *string {
 }
 
 // buildApkURL constructs an APK package URL from a purl.
+// Search is used here because we may not know the architecture of the package.
 func buildApkURL(purl packageurl.PackageURL) *string {
 	return buildURL("https://pkgs.alpinelinux.org/packages?name=%s", purl.Name)
 }
@@ -178,6 +183,7 @@ func buildHexURL(purl packageurl.PackageURL) *string {
 
 // buildCocoapodsURL constructs a CocoaPods package URL from a purl.
 func buildCocoapodsURL(purl packageurl.PackageURL) *string {
+	// TODO: version is not used here, but it is possible
 	return buildURL("https://cocoapods.org/pods/%s", purl.Name)
 }
 
